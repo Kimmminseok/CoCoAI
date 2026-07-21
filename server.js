@@ -11,7 +11,7 @@ async function startServer() {
     connection.release();
 
     app.listen(PORT, () => {
-      console.log(`서버 실행 중: http://localhost:${PORT}`);
+      console.log(`서버 실행 중: http://13.125.217.236:${PORT}`);
     });
   } catch (error) {
     console.error("MySQL DB 연결 실패:", error.message);

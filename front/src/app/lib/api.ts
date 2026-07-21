@@ -1,4 +1,4 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://13.125.217.236:5001';
 
 export interface ApiResponse<T> {
   success: boolean;
