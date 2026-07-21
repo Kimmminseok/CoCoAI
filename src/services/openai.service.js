@@ -1,6 +1,6 @@
 require("dotenv").config();
 const OpenAI = require("openai");
-const { buildProblemPrompt } = require("./prompt.service");
+const { buildProblemPrompt, buildTheoryPrompt } = require("./prompt.service");
 
 function getOpenAIClient() {
   if (!process.env.OPENAI_API_KEY) {
@@ -78,6 +78,42 @@ async function generateProblems({ languageName, difficulty, count }) {
   }
 }
 
+async function generateTheory({ languageName, difficulty, topic }) {
+  const client = getOpenAIClient();
+  const model = process.env.OPENAI_MODEL || "gpt-4.1-mini";
+
+  const prompt = buildTheoryPrompt(languageName, difficulty, topic);
+
+  const response = await client.responses.create({
+    model,
+    input: prompt,
+    text: {
+      format: {
+        type: "json_schema",
+        name: "coding_theory_content",
+        strict: true,
+        schema: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            content: { type: "string" },
+          },
+          required: ["content"],
+        },
+      },
+    },
+  });
+
+  try {
+    return JSON.parse(response.output_text);
+  } catch (error) {
+    console.error("AI 이론 응답 JSON 파싱 실패:");
+    console.error(response.output_text);
+
+    throw new Error("AI 이론 응답 형식이 올바르지 않습니다.");
+  }
+}
 module.exports = {
   generateProblems,
+  generateTheory,
 };

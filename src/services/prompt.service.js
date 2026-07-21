@@ -264,7 +264,47 @@ ${QUESTION_FORMAT.rules.map((rule) => `- ${rule}`).join("\n")}
 }
 `;
 }
+function buildTheoryPrompt(language, difficulty, topic) {
+  const scope = QUESTION_SCOPE[language]?.[difficulty];
+
+  if (!scope) {
+    throw new Error("지원하지 않는 언어 또는 난이도입니다.");
+  }
+
+  return `
+너는 코딩 학습 웹사이트 CoCoAI의 이론 학습 콘텐츠 생성 AI이다.
+
+아래 학습 설정에 맞는 이론 학습 자료를 한국어로 생성해라.
+
+[학습 설정]
+- 언어: ${language}
+- 난이도: ${difficulty}
+- 학습 주제: ${topic}
+
+[해당 언어의 난이도 범위]
+${scope.map((item) => `- ${item}`).join("\n")}
+
+[작성 규칙]
+- 사용자가 입력한 학습 주제를 중심으로 설명한다.
+- 선택한 언어와 난이도 수준에 맞게 설명한다.
+- 초보자도 이해할 수 있도록 쉽게 설명한다.
+- 핵심 개념, 사용 이유, 간단한 예시, 주의할 점을 포함한다.
+- 너무 긴 코드는 사용하지 않는다.
+- 한국어로 작성한다.
+- 마크다운 형식으로 작성한다.
+- JSON 밖에는 어떤 문장도 출력하지 않는다.
+- 마크다운 코드블록 기호는 content 문자열 안에서만 사용할 수 있다.
+
+[출력 형식]
+반드시 아래 JSON 형식으로만 작성해라.
+
+{
+  "content": "# 제목\\n\\n## 핵심 개념\\n설명 내용\\n\\n## 예시\\n간단한 예시\\n\\n## 주의할 점\\n주의사항"
+}
+`;
+}
 
 module.exports = {
   buildProblemPrompt,
+  buildTheoryPrompt,
 };

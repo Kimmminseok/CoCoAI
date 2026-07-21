@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 const pool = require("../config/db");
-const { generateProblems } = require("../services/openai.service");
+const { generateProblems, generateTheory } = require("../services/openai.service");
 const { saveStudyResultToDb } = require("../services/studyResult.service");
 
 const problemSetStore = new Map();
@@ -191,7 +191,66 @@ async function submitProblems(req, res) {
   }
 }
 
+async function createTheory(req, res) {
+  const { language_id, difficulty, topic } = req.body;
+
+  if (!language_id || !difficulty || !topic) {
+    return res.status(400).json({
+      success: false,
+      message: "학습 언어, 난이도, 주제는 필수입니다.",
+    });
+  }
+
+  if (!["EASY", "NORMAL", "HARD"].includes(difficulty)) {
+    return res.status(400).json({
+      success: false,
+      message: "난이도는 EASY, NORMAL, HARD 중 하나여야 합니다.",
+    });
+  }
+
+  try {
+    const [languages] = await pool.query(
+      `SELECT language_id, language_name
+       FROM languages
+       WHERE language_id = ?`,
+      [language_id]
+    );
+
+    if (languages.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "존재하지 않는 학습 언어입니다.",
+      });
+    }
+
+    const languageName = languages[0].language_name;
+
+    const result = await generateTheory({
+      languageName,
+      difficulty,
+      topic,
+    });
+
+    return res.json({
+      success: true,
+      message: "AI 이론 생성 성공",
+      data: {
+        content: result.content,
+      },
+    });
+  } catch (error) {
+    console.error("AI 이론 생성 오류:");
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message || "AI 이론 생성 중 오류가 발생했습니다.",
+    });
+  }
+}
+
 module.exports = {
   createProblems,
   submitProblems,
+  createTheory, 
 };
