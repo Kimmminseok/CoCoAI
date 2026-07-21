@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx vite *)",
+      "Bash(xargs -I{} echo {})",
+      "Bash(npx tsc *)",
+      "Skill(run)",
+      "Bash(chromium-cli --help)",
+      "Bash(npm ls *)",
+      "Bash(npx --yes playwright --version)",
+      "Bash(npx --yes playwright install chromium)",
+      "Read(//c/Users/qorjs/AppData/Local/Temp/claude/C--ver-1-1-coai/1beee9c9-b586-42ca-ba13-5abb53598956/scratchpad/**)",
+      "Bash(npm init *)",
+      "Bash(npm install *)",
+      "Bash(node test-auth.mjs)",
+      "Bash(pkill -f \"vite\")",
+      "Bash(mkdir -p shots)",
+      "Bash(node test-findid-findpw.mjs)",
+      "Bash(node drive.js)",
+      "Bash(node debug.js)",
+      "Bash(node debug2.js)",
+      "Bash(node check404.js)",
+      "Bash(curl -sf http://localhost:5173)",
+      "Bash(powershell -NoProfile -Command \"Get-NetTCPConnection -LocalPort 5173 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess\" 2>/dev/null)",
+      "Bash(cd *)",
+      "Bash(disown)",
+      "Bash(curl -s http://localhost:5173/)",
+      "Bash(chromium-cli *)",
+      "Bash(cp /tmp/pw-runner/landing.png \"/c/Users/qorjs/AppData/Local/Temp/claude/C--ver-1-1-coai/9aec5dc6-b291-4653-986a-2a52867b8933/scratchpad/\")",
+      "Bash(cp /tmp/pw-runner/login.png \"/c/Users/qorjs/AppData/Local/Temp/claude/C--ver-1-1-coai/9aec5dc6-b291-4653-986a-2a52867b8933/scratchpad/\")",
+      "Read(//c/Users/qorjs/AppData/Local/Temp/claude/C--ver-1-1-coai/9aec5dc6-b291-4653-986a-2a52867b8933/scratchpad/**)",
+      "Bash(taskkill //F //IM node.exe //FI \"WINDOWTITLE eq *vite*\")",
+      "Bash(pkill -f \"vite --port 5173\")",
+      "PowerShell($conn = Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue; if \\($conn\\) { Stop-Process -Id $conn.OwningProcess -Force; \"killed pid $\\($conn.OwningProcess\\)\" } else { \"no process found on 5173\" })",
+      "Bash(curl -s http://localhost:5173/ -o /dev/null -w \"%{http_code}\\\\n\")",
+      "Bash(cp \"/c/Users/qorjs/AppData/Local/Temp/claude/C--ver-1-1-coai/9aec5dc6-b291-4653-986a-2a52867b8933/scratchpad/check-remember.mjs\" /tmp/pw-runner/check-remember.mjs)",
+      "Bash(node check-remember.mjs)",
+      "Bash(npx playwright *)",
+      "Bash(node verify_find_password.mjs)"
+    ]
+  }
+}
