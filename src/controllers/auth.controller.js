@@ -110,7 +110,17 @@ async function login(req, res) {
       });
     }
 
-    const isPasswordMatch = await bcrypt.compare(password, user.password_hash);
+    if (!user.password_hash) {
+      return res.status(401).json({
+        success: false,
+        message: "소셜 로그인으로 가입된 계정입니다.",
+      });
+    }
+
+    const isPasswordMatch = await bcrypt.compare(
+      password,
+      user.password_hash
+    );
 
     if (!isPasswordMatch) {
       return res.status(401).json({
@@ -174,21 +184,28 @@ function redirectWithToken(res, token) {
   return res.redirect(`${frontendUrl}/social-login-success?token=${token}`);
 }
 
-async function findOrCreateSocialUser({ provider, providerUserId, email, name, profileImageUrl }) {
+async function findOrCreateSocialUser({
+  provider,
+  providerUserId,
+  email,
+  name,
+  profileImageUrl,
+}) {
   const connection = await pool.getConnection();
 
   try {
     await connection.beginTransaction();
 
-    const [existingUsers] = await connection.query(
+    // 1. 이미 같은 소셜 계정으로 가입했는지 확인
+    const [providerUsers] = await connection.query(
       `SELECT user_id, login_id, email, name, role, status
        FROM users
        WHERE signup_type = ? AND provider_user_id = ?`,
       [provider, providerUserId]
     );
 
-    if (existingUsers.length > 0) {
-      const user = existingUsers[0];
+    if (providerUsers.length > 0) {
+      const user = providerUsers[0];
 
       if (user.status !== "ACTIVE") {
         throw new Error("탈퇴했거나 비활성화된 계정입니다.");
@@ -198,13 +215,79 @@ async function findOrCreateSocialUser({ provider, providerUserId, email, name, p
       return user;
     }
 
-    const safeEmail = email || `${provider.toLowerCase()}_${providerUserId}@social.cocoai.local`;
+    // 2. 같은 이메일을 사용하는 기존 계정 확인
+    if (email) {
+      const [emailUsers] = await connection.query(
+        `SELECT user_id, login_id, email, name, role, status,
+                signup_type, provider_user_id
+         FROM users
+         WHERE email = ?`,
+        [email]
+      );
+
+      if (emailUsers.length > 0) {
+        const existingUser = emailUsers[0];
+
+        if (existingUser.status !== "ACTIVE") {
+          throw new Error("탈퇴했거나 비활성화된 계정입니다.");
+        }
+
+        // 기존 로컬 계정에 소셜 로그인 정보 연결
+        if (existingUser.signup_type === "LOCAL") {
+          await connection.query(
+            `UPDATE users
+             SET signup_type = ?,
+                 provider_user_id = ?,
+                 profile_image_url = COALESCE(?, profile_image_url)
+             WHERE user_id = ?`,
+            [
+              provider,
+              providerUserId,
+              profileImageUrl || null,
+              existingUser.user_id,
+            ]
+          );
+
+          await connection.commit();
+
+          return {
+            user_id: existingUser.user_id,
+            login_id: existingUser.login_id,
+            email: existingUser.email,
+            name: existingUser.name,
+            role: existingUser.role,
+            status: existingUser.status,
+          };
+        }
+
+        throw new Error(
+          `이미 ${existingUser.signup_type} 방식으로 가입된 이메일입니다.`
+        );
+      }
+    }
+
+    // 3. 기존 계정이 없으면 새 소셜 회원 생성
+    const safeEmail =
+      email ||
+      `${provider.toLowerCase()}_${providerUserId}@social.cocoai.local`;
+
     const safeName = name || `${provider} 사용자`;
     const loginId = `${provider.toLowerCase()}_${providerUserId}`;
 
     const [result] = await connection.query(
       `INSERT INTO users
-       (login_id, email, password_hash, name, phone, profile_image_url, signup_type, provider_user_id, role, status)
+       (
+         login_id,
+         email,
+         password_hash,
+         name,
+         phone,
+         profile_image_url,
+         signup_type,
+         provider_user_id,
+         role,
+         status
+       )
        VALUES (?, ?, NULL, ?, NULL, ?, ?, ?, 'USER', 'ACTIVE')`,
       [
         loginId,
@@ -356,60 +439,76 @@ async function naverCallback(req, res) {
   }
 }
 
-function googleLogin(req, res) {
-  const googleAuthUrl =
-    `https://accounts.google.com/o/oauth2/v2/auth` +
-    `?response_type=code` +
-    `&client_id=${process.env.GOOGLE_CLIENT_ID}` +
-    `&redirect_uri=${encodeURIComponent(process.env.GOOGLE_REDIRECT_URI)}` +
-    `&scope=${encodeURIComponent("openid email profile")}`;
+function githubLogin(req, res) {
+  const githubAuthUrl =
+    `https://github.com/login/oauth/authorize` +
+    `?client_id=${process.env.GITHUB_CLIENT_ID}` +
+    `&redirect_uri=${encodeURIComponent(process.env.GITHUB_REDIRECT_URI)}` +
+    `&scope=${encodeURIComponent("read:user user:email")}`;
 
-  return res.redirect(googleAuthUrl);
+  return res.redirect(githubAuthUrl);
 }
 
-async function googleCallback(req, res) {
+async function githubCallback(req, res) {
   const { code } = req.query;
 
   try {
     const tokenResponse = await axios.post(
-      "https://oauth2.googleapis.com/token",
-      new URLSearchParams({
-        grant_type: "authorization_code",
-        client_id: process.env.GOOGLE_CLIENT_ID,
-        client_secret: process.env.GOOGLE_CLIENT_SECRET,
-        redirect_uri: process.env.GOOGLE_REDIRECT_URI,
+      "https://github.com/login/oauth/access_token",
+      {
+        client_id: process.env.GITHUB_CLIENT_ID,
+        client_secret: process.env.GITHUB_CLIENT_SECRET,
         code,
-      }),
+        redirect_uri: process.env.GITHUB_REDIRECT_URI,
+      },
       {
         headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
+          Accept: "application/json",
         },
       }
     );
 
     const accessToken = tokenResponse.data.access_token;
 
-    const userResponse = await axios.get("https://www.googleapis.com/oauth2/v2/userinfo", {
+    const userResponse = await axios.get("https://api.github.com/user", {
       headers: {
         Authorization: `Bearer ${accessToken}`,
+        Accept: "application/vnd.github+json",
       },
     });
 
-    const googleUser = userResponse.data;
+    const githubUser = userResponse.data;
+
+    let email = githubUser.email;
+
+    if (!email) {
+      const emailResponse = await axios.get("https://api.github.com/user/emails", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: "application/vnd.github+json",
+        },
+      });
+
+      const primaryEmail = emailResponse.data.find(
+        (item) => item.primary && item.verified
+      );
+
+      email = primaryEmail?.email || emailResponse.data[0]?.email;
+    }
 
     const user = await findOrCreateSocialUser({
-      provider: "GOOGLE",
-      providerUserId: String(googleUser.id),
-      email: googleUser.email,
-      name: googleUser.name,
-      profileImageUrl: googleUser.picture,
+      provider: "GITHUB",
+      providerUserId: String(githubUser.id),
+      email,
+      name: githubUser.name || githubUser.login,
+      profileImageUrl: githubUser.avatar_url,
     });
 
     const token = createJwt(user);
     return redirectWithToken(res, token);
   } catch (error) {
-    console.error("구글 로그인 오류:", error.response?.data || error);
-    return res.redirect(`${process.env.FRONTEND_URL || "http://localhost:5173"}/login?error=google`);
+    console.error("깃허브 로그인 오류:", error.response?.data || error);
+    return res.redirect(`${process.env.FRONTEND_URL}/login?error=github`);
   }
 }
 
@@ -421,6 +520,6 @@ module.exports = {
   kakaoCallback,
   naverLogin,
   naverCallback,
-  googleLogin,
-  googleCallback,
+  githubLogin,
+  githubCallback,
 };

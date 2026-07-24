@@ -1,29 +1,29 @@
-import { useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router';
-import { setToken, getMyLearningSetting } from '../lib/dataSource';
+import { useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router";
+import { setToken, getMyLearningSetting } from "../lib/dataSource";
 
 export default function SocialLoginSuccess() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    const token = searchParams.get('token');
+    const token = searchParams.get("token");
 
     if (!token) {
-      navigate('/login');
+      navigate("/login", { replace: true });
       return;
     }
 
     setToken(token);
 
-    async function moveNext() {
+    const moveNext = async () => {
       try {
         await getMyLearningSetting();
-        navigate('/dashboard');
+        navigate("/dashboard", { replace: true });
       } catch {
-        navigate('/dashboard/learning-settings');
+        navigate("/dashboard/learning-settings", { replace: true });
       }
-    }
+    };
 
     moveNext();
   }, [navigate, searchParams]);

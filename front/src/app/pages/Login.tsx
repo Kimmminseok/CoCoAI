@@ -1,10 +1,11 @@
+
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { Checkbox } from '../components/ui/checkbox';
 import { Loader2 } from 'lucide-react';
-import { login, signup, setToken } from '../lib/dataSource';
+import { login, signup, setToken, getMyLearningSetting } from '../lib/dataSource';
 import loginImage from 'figma:asset/dd895531611369f3db5a3376814a32d651a82392.png';
 import kakaoLoginImage from 'figma:asset/kakao_login_wide.png';
 import naverLoginImage from 'figma:asset/naver_login_wide.png';
@@ -33,6 +34,10 @@ function GoogleLoginButton({ onClick }: { onClick: () => void }) {
 }
 
 const SAVED_LOGIN_ID_KEY = 'cocoai_saved_login_id';
+
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || 'http://3.34.91.214:5001';
+
 
 export default function Login() {
   const navigate = useNavigate();
@@ -77,14 +82,33 @@ export default function Login() {
         localStorage.removeItem(SAVED_LOGIN_ID_KEY);
       }
 
-      navigate('/dashboard');
-    } catch (err) {
-      setLoginError(err instanceof Error ? err.message : '로그인에 실패했습니다');
-    } finally {
-      setIsLoggingIn(false);
-    }
-  };
+	try {
+	  const settingResult: any = await getMyLearningSetting();
 
+	  const setting =
+        
+settingResult?.data?.setting ??
+        settingResult?.data ??
+        settingResult?.setting ??
+        settingResult;
+
+      if (!setting || !setting.language_id) {
+        navigate('/dashboard/learning-settings', { replace: true });
+        return;
+      }
+
+      navigate('/dashboard', { replace: true });
+      return;
+    } catch (error) {
+      navigate('/dashboard/learning-settings', { replace: true });
+      return;
+    }
+  } catch (err) {
+    setLoginError(err instanceof Error ? err.message : '로그인에 실패했습니다');
+  } finally {
+    setIsLoggingIn(false);
+  }
+};
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setSignupError('');
@@ -203,7 +227,9 @@ export default function Login() {
                   {/* #04 SNS-KAKAO - 명세서에 없음, 백엔드 연동 대기 */}
                   <button
                     type="button"
-                    onClick={() => alert('카카오톡 로그인은 준비 중입니다.')}
+		    onClick={() => {
+			window.location.href = `${API_BASE_URL}/api/auth/kakao`;
+		    }}
                     className="w-full h-12 rounded-full overflow-hidden hover:opacity-85 transition-opacity"
                   >
                     <img
@@ -215,8 +241,10 @@ export default function Login() {
                   {/* #03 SNS-NAVER - 명세서에 없음, 백엔드 연동 대기 */}
                   <button
                     type="button"
-                    onClick={() => alert('네이버 로그인은 준비 중입니다.')}
-                    className="w-full h-12 rounded-full overflow-hidden hover:opacity-85 transition-opacity"
+onClick={() => {
+  window.location.href = `${API_BASE_URL}/api/auth/naver`;
+	}}
+                   className="w-full h-12 rounded-full overflow-hidden hover:opacity-85 transition-opacity"
                   >
                     <img
                       src={naverLoginImage}
@@ -225,7 +253,15 @@ export default function Login() {
                     />
                   </button>
                   {/* #05 SNS-GOOGLE - 명세서에 없음, 백엔드 연동 대기 */}
-                  <GoogleLoginButton onClick={() => alert('구글 로그인은 준비 중입니다.')} />
+<button
+  type="button"
+  onClick={() => {
+    window.location.href = `${API_BASE_URL}/api/auth/github`;
+  }}
+  className="w-full h-12 rounded-full bg-[#24292f] text-white font-semibold hover:opacity-85 transition-opacity flex items-center justify-center"
+>
+  GitHub로 로그인
+</button>
                 </div>
               </div>
             </>

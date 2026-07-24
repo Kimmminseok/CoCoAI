@@ -8,8 +8,8 @@ const {
   kakaoCallback,
   naverLogin,
   naverCallback,
-  googleLogin,
-  googleCallback,
+  githubLogin,
+  githubCallback,
 } = require("../controllers/auth.controller");
 
 router.post("/signup", signup);
@@ -21,7 +21,7 @@ router.get("/kakao/callback", kakaoCallback);
 router.get("/naver", naverLogin);
 router.get("/naver/callback", naverCallback);
 
-router.get("/google", googleLogin);
-router.get("/google/callback", googleCallback);
+router.get("/github", githubLogin);
+router.get("/github/callback", githubCallback);
 
 module.exports = router;
