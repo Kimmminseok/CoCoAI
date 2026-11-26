@@ -36,7 +36,7 @@ function GoogleLoginButton({ onClick }: { onClick: () => void }) {
 const SAVED_LOGIN_ID_KEY = 'cocoai_saved_login_id';
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || 'http://3.34.91.214:5001';
+  import.meta.env.VITE_API_BASE_URL || window.location.origin;
 
 
 export default function Login() {
